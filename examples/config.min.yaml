@@ -1,0 +1,12 @@
+# This is a "minimal" (could strip out locations) config that I use
+# for basic testing.
+http:
+  default:
+    locations:
+      dd/go:
+        redirect: https://start.duckduckgo.com/html
+      index.html:
+        root: /nap/www
+      works:
+        alias: /nap/www
+    root: /nap/www

@@ -1,0 +1,203 @@
+# HTTP services to configure for reverse proxy.
+http:
+  # Default is a special service that does not accept subdomains. It
+  # has all other supported configurations. It is not required. If you
+  # choose not to use "default", nginx will return a 404 on port 80
+  # and a 502 on port 443.
+  default:
+    # If you don't mount over /nap/www, it will be a generated
+    # navigational dashboard (navdash) for the other configured
+    # services. However, if there are no other services, it is a
+    # simple "<h1>It works!</h1>".
+    root: /nap/www
+
+  # This is an example http service. You will likely want to remove
+  # all comments (after reading) so you can copy/paste easier. See
+  # examples/ for some "realistic" use cases.
+  example:
+    # Adding a cert enables HTTPS. This could be a cert from the PKI
+    # section, or you can Bring Your Own Certs (BYOC). See
+    # compose.yaml for examples. If using the default PKI, you do not
+    # need to specify that, otherwise use the format <pki>/<cert>.
+    # There is a special case for BYOC. You can put your certs (say
+    # Let's Encrypt) in a directory and mount them to /byoc. Files
+    # should be named <cert>.chain.pem and <cert>.key.pem. You can
+    # then use them with byoc/<cert>.
+    #
+    #cert: <pki>/example.com
+    #cert: byoc/example.com
+    cert: example.com
+
+    # You can add custom nginx here. Be careful as you can easily
+    # break things! Below is an example for filtering on User-Agent.
+    custom:
+      - |
+        #if ($http_user_agent = "curl/7.87.0") {
+        #  rewrite ^(.*)$ /hidden$1 last;
+        #}
+        #location ~* ^/hidden.*$ {
+        #  internal;
+        #  ...
+        #  rewrite ^/hidden(.*)$ $1 break;
+        #}
+
+    # Proxy additional locations. Locations can be configured with a
+    # "redirect", "root", or "upstream" (just like a top-level http
+    # service), but can also use "alias". See nginx documentation on
+    # best practices for alias vs root.
+    locations:
+      dd/go:
+        redirect: https://start.duckduckgo.com/html
+      index.html:
+        root: /nap/www
+      works:
+        alias: /nap/www
+
+    # All of the following options default to false, if not included.
+    options:
+      # Block common exploits like file inclusion, SQLi, XSS, etc...
+      block_exploits: false
+      # Enable caching for CSS, images, JavaScript, etc...
+      cache_assets: false
+      # Always redirect HTTP to HTTPS. You could also not expose port
+      # 80 in your compose.yaml instead.
+      force_tls: false
+      # Enable HTTP Strict Transport Security (this also enables
+      # force_tls).
+      hsts: false
+      # Enable HSTS for subdomains (this also enables hsts).
+      hsts_subdomains: false
+      # Enable support for HTTP/2. This requires HTTPS. I tested with
+      # HTTP and found curl requires the "--http2-prior-knowledge"
+      # flag and Chromium didn't really like it. While it can work
+      # with HTTP, it doesn't appear to be the default with current
+      # browsers, so only HTTPS for now.
+      http2_support: false
+      # Enable support for websockets.
+      websocket_support: false
+
+    # Redirect to host or subpath. This is an alternative to root and
+    # upstream.
+    #redirect: https://example.com
+    #redirect: /path
+
+    # Root serves a directory. This is an alternative to redirect and
+    # upstream. If using Docker, make sure you mount your directory.
+    #root: /www
+
+    # Specify subdomains to reach this service. If none are specified,
+    # then the service name is used.
+    subdomains:
+      - www
+
+    # Upstream will proxy to an upstream host. This is an alternative
+    # to redirect and root. The port defaults to 80 or 443, depending
+    # on scheme. The scheme defaults to http.
+    upstream:
+      host: app_host
+      port: 3000
+      scheme: http
+
+# This section is optional and lets you customize the colors of the
+# navdash. The defaults use the Solarized Dark palette.
+navdash:
+  background: 002b36
+  button-background: 073642
+  button-border: 268bd2
+  foreground: 839496
+
+# Default PKI information and certs to generate.
+#
+# If you are using BYOC, then you can delete this whole section.
+# Otherwise, read on.
+#
+# If you are not using BYOC and would like NAP to generate certs for
+# you, then the only required section here is "certs". However, if you
+# would prefer to change CA details, you can modify the below defaults
+# to fit your need.
+#
+# You can add multiple PKIs, if you need/want. See
+# examples/config.mpki.yaml.
+#
+# The PKIs are created on each start, so if you want to keep using the
+# same CA/certs, you should mount a volume to store them. See
+# compose.yaml.
+pki:
+  # Default is a special case and doesn't need specified above with
+  # your http services.
+  default:
+    ca: Nginx App Proxy (NAP)
+    certs:
+      # Standard cert
+      - www.example1.com
+      # Cert with Subject Alternative Name (SAN)
+      - www.example2.com:www1.example2.com:www2.example2.com
+      # Wildcard cert
+      - example.com:*.example.com
+    city:
+    days: 365
+    company:
+    country: US
+    state:
+    unit:
+
+# Stream services to configure. These three examples are from:
+#
+#   https://nginx.org/en/docs/stream/ngx_stream_core_module.html
+#
+# This section is optional and can be safely removed.
+stream:
+  # The name here is arbitrary and only used to name the conf file.
+  backend:
+    # You can add custom nginx here. Be careful as you can easily
+    # break things! Below is an example for defining an stream block.
+    custom:
+      - |
+        upstream backend {
+          hash $remote_addr consistent;
+          server backend1.example.com:12345 weight=5;
+          server 127.0.0.1:12345 max_fails=3 fail_timeout=30s;
+          server unix:/tmp/backend3;
+        }
+
+    # Define which port (with optional IP) to listen on. You can
+    # optionally append options to the listen directive (see next
+    # example).
+    listen: 12345
+
+    # The proto can be tcp or udp and defaults to tcp if not
+    # specified.
+    proto: tcp
+
+    # Under timeout you can specify the proxy connect timeout and
+    # proxy timeout. If not specified, the defaults are the same as
+    # nginx's defaults.
+    timeout:
+      connect: 1s
+      proxy: 3s
+
+    # Use upstream to proxy_pass the traffic to an upstream host. The
+    # upstream can be defined in a custom block or dropped here
+    # verbatim.
+    upstream: backend
+
+  # This example shows a listen directive with additional options and
+  # uses UDP.
+  dns:
+    custom:
+      - |
+        upstream dns {
+          server 192.168.0.1:53535;
+          server dns.example.com:53;
+        }
+    listen: 127.0.0.1:53 reuseport
+    proto: udp
+    timeout:
+      proxy: 20s
+    upstream: dns
+
+  # This example is an IPv6 listener with a unix socket upstream.
+  socket:
+    # IPv6 address must be quoted
+    listen: "[::1]:12345"
+    upstream: unix:/tmp/stream.socket

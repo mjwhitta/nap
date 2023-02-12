@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+case "${0}" in
+    "./build") ;;
+    *) echo "Call from root of repo"; exit 1 ;;
+esac
+
+docker build -t ghcr.io/mjwhitta/nap:latest .
+docker buildx prune -f &>/dev/null
+
+while read -r line; do
+    docker rmi "$line"
+done < <(docker images | awk '/<none>\s+<none>/ {print $3}')
+unset line
+
+docker rmi alpine:latest 2>/dev/null
+exit 0

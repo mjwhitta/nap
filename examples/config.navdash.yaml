@@ -1,0 +1,22 @@
+# This example shows how to use the navdash functionality to store
+# bookmarks. Not how I intended this to be used, but it works.
+
+http:
+  bing:
+    subdomains:
+      - bing
+      - microsoft
+      - ms
+    redirect: https://bing.com
+  default:
+    root: /nap/www
+  duckduckgo:
+    subdomains:
+      - ddg
+    redirect: https://start.duckduckgo.com/html
+  google:
+    redirect: https://google.com
+  ipconfig:
+    redirect: https://ipconfig.io/json
+  reddit:
+    redirect: https://reddit.com

@@ -1,0 +1,18 @@
+# This example includes multiple PKIs.
+
+http:
+  default:
+    # You don't need to specify PKI, if default
+    cert: example1.com
+    root: /nap/www
+  example:
+    cert: other/example2.com
+    root: /nap/www
+
+pki:
+  default:
+    ca: Nginx App Proxy (NAP) 1
+    certs: example1.com:*.example1.com
+  other:
+    ca: Nginx App Proxy (NAP) 2
+    certs: example2.com:*.example2.com

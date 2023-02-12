@@ -1,0 +1,46 @@
+name: homelab
+networks:
+  nap:
+services:
+  nap:
+    environment:
+      # Your GID
+      - DKR_GID=1000
+      # Your UID
+      - DKR_UID=1000
+    hostname: nap
+    image: ghcr.io/mjwhitta/nap:latest
+    networks:
+      # Put your other services on this network too
+      - nap
+    ports:
+      # For HTTP
+      - "80:80"
+      # For HTTPS
+      - "443:443"
+    restart: unless-stopped
+    volumes:
+      # Mount BYOC directory, if you have Let's Encrypt or similar.
+      #- ./path/to/your/certs:/byoc
+      #
+      # Mount everything (directory must contain at least config.yaml)
+      #- ./local:/nap/data
+      #
+      # Or mount just the things you need/want
+      #
+      # Mount your config (mandatory, unless mounting everything)
+      - ./local/config.yaml:/nap/data/config.yaml
+      #
+      # To see generated nginx configs (optional, these get recreated
+      # on every start and appear in docker logs, so you really don't
+      # need this)
+      #- ./local/cfgs:/nap/data/cfgs
+      #
+      # To see nginx logs (optional, "docker compose logs -f nap")
+      #- ./local/logs:/nap/data/logs
+      #
+      # To use your own existing PKI, or to store the generated one
+      #- ./local/pki:/nap/data/pki/default
+      #
+      # To use multiple PKIs (does anyone actually do that?)
+      #- ./local/pki:/nap/data/pki

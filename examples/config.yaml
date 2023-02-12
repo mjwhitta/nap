@@ -1,0 +1,76 @@
+# This example is very similar to one I use.
+
+http:
+  adguard:
+    cert: example.com
+    options:
+      block_exploits: true
+      force_tls: true
+      http2_support: true
+      websocket_support: true
+    # Example showing default and alternative subdomain.
+    subdomains:
+      - adguard
+      - dns
+    upstream:
+      host: adguard
+      port: 3000
+  default:
+    cert: example.com
+    options:
+      block_exploits: true
+      force_tls: true
+      http2_support: true
+    root: /nap/www
+  gitea:
+    cert: example.com
+    options:
+      block_exploits: true
+      force_tls: true
+      http2_support: true
+      websocket_support: true
+    # Example showing alternative subdomain.
+    subdomains:
+      - git
+    upstream:
+      host: gitea
+      port: 3000
+  grafana:
+    cert: example.com
+    options:
+      block_exploits: true
+      force_tls: true
+      http2_support: true
+      websocket_support: true
+    upstream:
+      host: grafana
+      port: 3000
+  # Good example of a container utilizing subpaths.
+  guac:
+    cert: example.com
+    locations:
+      guacamole:
+        upstream:
+          host: guac
+          port: 8080
+    options:
+      block_exploits: true
+      force_tls: true
+      http2_support: true
+      websocket_support: true
+    redirect: /guacamole
+  syncthing:
+    cert: example.com
+    options:
+      block_exploits: true
+      force_tls: true
+      http2_support: true
+      websocket_support: true
+    upstream:
+      host: syncthing
+      port: 8384
+
+pki:
+  default:
+    certs:
+      - example.com:*.example.com
