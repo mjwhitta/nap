@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Fetch tags
-        run: git pull --tags
+        run: git pull --tags origin main
       - name: Format latest tag for Docker
         run: |
           t="$(git tag -l | sort -V | tail -n 1)"
