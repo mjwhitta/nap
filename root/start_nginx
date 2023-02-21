@@ -374,6 +374,9 @@ EOF
             cert="$(querystr "$k.cert")"
             sub="$(querystr "$k.subdomains[0]")"
 
+            # Normalize
+            sub="$(tr -d "[:punct:][:space:]" <<<"${sub:-${http,,}}")"
+
             cat <<EOF
       <a href="" id="${http,,}">
         <div class="w3-card-4">
@@ -384,8 +387,7 @@ EOF
       </a>
       <script>
         document.getElementById("${http,,}").setAttribute(
-          "href",
-          "http${cert:+s}://${sub:-${http,,}}." + window.location.host
+          "href", "http${cert:+s}://$sub." + window.location.host
         );
       </script>
 EOF
