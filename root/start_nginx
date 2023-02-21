@@ -37,26 +37,29 @@ bootstrap_pki() {
     local -a certs
     local country
     local days
+    local k
 
     [[ $(querystr ".pki|length") -gt 0 ]] || return 0
 
     while read -r pki; do
-        ca="$(querystr ".pki.$pki.ca")"
-        country="$(querystr ".pki.$pki.country")"
-        days="$(querystr ".pki.$pki.days")"
+        k=".pki[\"$pki\"]"
+
+        ca="$(querystr "$k.ca")"
+        country="$(querystr "$k.country")"
+        days="$(querystr "$k.days")"
 
         # Create certify config, if missing
-        if [[ ! -f /nap/data/pki/$pki/.cfg ]]; then
-            mkdir -p "/nap/data/pki/$pki"
-            cat >"/nap/data/pki/$pki/.cfg" <<EOF
+        if [[ ! -f /nap/data/pki/${pki// /_}/.cfg ]]; then
+            mkdir -p "/nap/data/pki/${pki// /_}"
+            cat >"/nap/data/pki/${pki// /_}/.cfg" <<EOF
 cacn = ${ca:-Nginx App Proxy (NAP) CA}
 cadays = ${days:-365}
 certdays = ${days:-365}
-city = $(querystr ".pki.$pki.city")
-company = $(querystr ".pki.$pki.company")
+city = $(querystr "$k.city")
+company = $(querystr "$k.company")
 country = ${country:-US}
-state = $(querystr ".pki.$pki.state")
-unit = $(querystr ".pki.$pki.unit")
+state = $(querystr "$k.state")
+unit = $(querystr "$k.unit")
 EOF
         fi
 
@@ -64,9 +67,9 @@ EOF
         unset certs
         while read -r cert; do
             certs+=("$cert")
-        done < <(querystr ".pki.$pki.certs[]?"); unset cert
+        done < <(querystr "$k.certs[]?"); unset cert
 
-        certify -p "/nap/data/pki/$pki" "${certs[@]}"
+        certify -p "/nap/data/pki/${pki// /_}" "${certs[@]}"
     done < <(querystr ".pki|keys|.[]"); unset pki
 }
 
@@ -81,9 +84,12 @@ generate_http_cfgs() {
     local hstssubs
     local http
     local http2
+    local k
+    local pki
     local server
     local sub
     local -a subs
+    local tmp
     local ws
 
     # Delete existing Nginx configs
@@ -94,30 +100,38 @@ generate_http_cfgs() {
 
     # Create Nginx configs
     while read -r http; do
+        k=".http[\"$http\"]"
+
+        # Normalize
+        tmp="$(tr -d "[:punct:][:space:]" <<<"${http,,}")"
+
         subinfo "Creating $http Nginx http config"
 
         # Check for cert
-        cert="$(querystr ".http.$http.cert")"
+        cert="$(querystr "$k.cert")"
 
         # Transform cert into filepath
         case "$cert" in
             "") ;;
             "byoc/"*) cert="/$cert" ;;
-            *"/"*) cert="/nap/data/pki/${cert%/*}/pems/${cert##*/}" ;;
+            *"/"*)
+                pki="${cert%/*}"
+                cert="/nap/data/pki/${pki// /_}/pems/${cert##*/}"
+                ;;
             *) cert="/nap/data/pki/default/pems/$cert" ;;
         esac
 
         # Store other configuration values
-        custom="$(querystr ".http.$http.custom[]?")"
+        custom="$(querystr "$k.custom[]?")"
 
         # Store options
-        block="$(querybool ".http.$http.options.block_exploits")"
-        cache="$(querybool ".http.$http.options.cache_assets")"
-        forcetls="$(querybool ".http.$http.options.force_tls")"
-        hsts="$(querybool ".http.$http.options.hsts")"
-        hstssubs="$(querybool ".http.$http.options.hsts_subdomains")"
-        http2="$(querybool ".http.$http.options.http2_support")"
-        ws="$(querybool ".http.$http.options.websocket_support")"
+        block="$(querybool "$k.options.block_exploits")"
+        cache="$(querybool "$k.options.cache_assets")"
+        forcetls="$(querybool "$k.options.force_tls")"
+        hsts="$(querybool "$k.options.hsts")"
+        hstssubs="$(querybool "$k.options.hsts_subdomains")"
+        http2="$(querybool "$k.options.http2_support")"
+        ws="$(querybool "$k.options.websocket_support")"
 
         [[ -z $hstssubs ]] || hsts="true"
         [[ -z $hsts ]] || forcetls="true"
@@ -127,10 +141,9 @@ generate_http_cfgs() {
         if [[ "${http,,}" != "default" ]]; then
             while read -r sub; do
                 subs+=("$sub")
-            done < <(querystr ".http.$http.subdomains[]?")
-            unset sub
+            done < <(querystr "$k.subdomains[]?"); unset sub
 
-            [[ ${#subs[@]} -gt 0 ]] || subs+=("${http,,}")
+            [[ ${#subs[@]} -gt 0 ]] || subs+=("$tmp")
         fi
 
         # Determine server name from subs
@@ -140,7 +153,8 @@ generate_http_cfgs() {
         unset default
         [[ -n $server ]] || default="true"
 
-        sed -r "/^\s*$/d" >"/nap/data/cfgs/http.d/$http.conf" <<EOF
+        sed -r "/^\s*$/d" \
+            >"/nap/data/cfgs/http.d/${http// /_}.conf" <<EOF
 # $http
 server {
   # HTTP ports
@@ -155,8 +169,8 @@ ${cert:+  listen [::]:443 ${default:+default_server }${http2:+http2 }ssl;}
   server_name ${server:-_};
 
   # Logs
-  access_log /nap/data/logs/${http,,}.access.log;
-  error_log /nap/data/logs/${http,,}.error.log;
+  access_log /nap/data/logs/$tmp.access.log;
+  error_log /nap/data/logs/$tmp.error.log;
 
 ${cert:+  # TLS certs}
 ${cert:+  ssl_certificate $cert.chain.pem;}
@@ -179,17 +193,17 @@ $(
 )
 
 $(
-    [[ $(querystr ".http.$http.locations|length") -gt 0 ]] || return 0
+    [[ $(querystr "$k.locations|length") -gt 0 ]] || return 0
 
     echo "  # User's custom locations"
 
     while read -r loc; do
-        generate_loc "$loc" ".http.$http.locations.\"$loc\""
-    done < <(querystr ".http.$http.locations|keys|.[]"); unset loc
+        generate_loc "$loc" "$k.locations[\"$loc\"]"
+    done < <(querystr "$k.locations|keys|.[]"); unset loc
 )
 
   # Default location
-$(generate_loc "" ".http.$http")
+$(generate_loc "" "$k")
 }
 EOF
     done < <(querystr ".http|keys|.[]"); unset http
@@ -300,6 +314,7 @@ generate_navdash() {
     local cert
     local foreground
     local http
+    local k
     local sub
 
     case "$(head -n 1 www/index.html)" in
@@ -354,8 +369,10 @@ EOF
 
     (
         while read -r http; do
-            cert="$(querystr ".http.$http.cert")"
-            sub="$(querystr ".http.$http.subdomains[0]")"
+            k=".http[\"$http\"]"
+
+            cert="$(querystr "$k.cert")"
+            sub="$(querystr "$k.subdomains[0]")"
 
             cat <<EOF
       <a href="" id="${http,,}">
@@ -386,6 +403,7 @@ EOF
 
 generate_stream_cfgs() {
     local custom
+    local k
     local listen
     local proto
     local stream
@@ -400,15 +418,17 @@ generate_stream_cfgs() {
     [[ $(querystr ".stream|length") -gt 0 ]] || return 0
 
     while read -r stream; do
+        k=".stream[\"$stream\"]"
+
         subinfo "Creating $stream Nginx stream config"
 
         # Store configuration values
-        custom="$(querystr ".stream.$stream.custom[]?")"
-        listen="$(querystr ".stream.$stream.listen")"
-        proto="$(querystr ".stream.$stream.proto")"
-        toconn="$(querystr ".stream.$stream.timeout.connect")"
-        toproxy="$(querystr ".stream.$stream.timeout.proxy")"
-        upstream="$(querystr ".stream.$stream.upstream")"
+        custom="$(querystr "$k.custom[]?")"
+        listen="$(querystr "$k.listen")"
+        proto="$(querystr "$k.proto")"
+        toconn="$(querystr "$k.timeout.connect")"
+        toproxy="$(querystr "$k.timeout.proxy")"
+        upstream="$(querystr "$k.upstream")"
 
         case "${proto,,}" in
             "") ;;
@@ -416,8 +436,8 @@ generate_stream_cfgs() {
             "udp") proto="udp" ;;
         esac
 
-        sed -r "/^\s*$/d" >"/nap/data/cfgs/stream.d/$stream.conf" \
-            <<EOF
+        sed -r "/^\s*$/d" \
+            >"/nap/data/cfgs/stream.d/${stream// /_}.conf" <<EOF
 $(
     [[ -z $custom ]] || echo "  # User's custom config"
     while IFS="" read -r line; do
@@ -496,20 +516,27 @@ validate_http_cfgs() {
     local forcetls
     local http
     local http2
+    local k
     local loc
+    local pki
     local tmp
 
     [[ $(querystr ".http|length") -gt 0 ]] || return 0
 
     while read -r http; do
+        k=".http[\"$http\"]"
+
         # Check for cert
-        cert="$(querystr ".http.$http.cert")"
+        cert="$(querystr "$k.cert")"
 
         # Transform cert into filepath
         case "$cert" in
             "") ;;
             "byoc/"*) cert="/$cert" ;;
-            *"/"*) cert="/nap/data/pki/${cert%/*}/pems/${cert##*/}" ;;
+            *"/"*)
+                pki="${cert%/*}"
+                cert="/nap/data/pki/${pki// /_}/pems/${cert##*/}"
+                ;;
             *) cert="/nap/data/pki/default/pems/$cert" ;;
         esac
 
@@ -523,24 +550,18 @@ validate_http_cfgs() {
         fi
 
         # Validate other configuration values
-        querystr ".http.$http.custom[]?" >/dev/null || exit 3;
+        querystr "$k.custom[]?" >/dev/null || exit 3;
 
         # Validate options
-        querybool ".http.$http.options.block_exploits" >/dev/null \
-            || exit 3
-        querybool ".http.$http.options.cache_assets" >/dev/null \
-            || exit 3
-        forcetls="$(querybool ".http.$http.options.force_tls")" \
-            || exit 3
-        tmp="$(querybool ".http.$http.options.hsts")" || exit 3
+        querybool "$k.options.block_exploits" >/dev/null || exit 3
+        querybool "$k.options.cache_assets" >/dev/null || exit 3
+        forcetls="$(querybool "$k.options.force_tls")" || exit 3
+        tmp="$(querybool "$k.options.hsts")" || exit 3
         [[ -z $tmp ]] || forcetls="true"
-        tmp="$(querybool ".http.$http.options.hsts_subdomains")" \
-            || exit 3
+        tmp="$(querybool "$k.options.hsts_subdomains")" || exit 3
         [[ -z $tmp ]] || forcetls="true"
-        http2="$(querybool ".http.$http.options.http2_support")" \
-            || exit 3
-        querybool ".http.$http.options.websocket_support" >/dev/null \
-            || exit 3
+        http2="$(querybool "$k.options.http2_support")" || exit 3
+        querybool "$k.options.websocket_support" >/dev/null || exit 3
 
         if [[ -z $cert ]] && [[ -n $forcetls ]]; then
             errx 3 "$http can not force TLS with no cert"
@@ -551,30 +572,23 @@ validate_http_cfgs() {
         fi
 
         # Validate locations
-        if [[ $(querystr ".http.$http.locations|length") -gt 0 ]]
-        then
+        if [[ $(querystr "$k.locations|length") -gt 0 ]]; then
             while read -r loc; do
                 count="0"
 
                 # Check for alias
-                tmp="$(
-                    querystr ".http.$http.locations.\"$loc\".alias"
-                )"
+                tmp="$(querystr "$k.locations[\"$loc\"].alias")"
                 if [[ -n $tmp ]]; then
                     ((count++))
                     [[ -d "$tmp" ]] || errx 3 "$tmp not found"
                 fi
 
                 # Check for redirect
-                tmp="$(
-                    querystr ".http.$http.locations.\"$loc\".redirect"
-                )"
+                tmp="$(querystr "$k.locations[\"$loc\"].redirect")"
                 [[ -z $tmp ]] || ((count++))
 
                 # Check for root
-                tmp="$(
-                    querystr ".http.$http.locations.\"$loc\".root"
-                )"
+                tmp="$(querystr "$k.locations[\"$loc\"].root")"
                 if [[ -n $tmp ]]; then
                     ((count++))
                     [[ -d "$tmp" ]] || errx 3 "$tmp not found"
@@ -582,8 +596,7 @@ validate_http_cfgs() {
 
                 # Check for upstream host
                 tmp="$(
-                    querystr \
-                    ".http.$http.locations.\"$loc\".upstream.host"
+                    querystr "$k.locations[\"$loc\"].upstream.host"
                 )"
                 [[ -z $tmp ]] || ((count++))
 
@@ -593,23 +606,23 @@ validate_http_cfgs() {
                     errx 3 \
                         "$http's location $loc has multiple targets"
                 fi
-            done < <(querystr ".http.$http.locations|keys|.[]")
+            done < <(querystr "$k.locations|keys|.[]")
             unset loc
         fi
 
         # Validate upstream
         count="0"
 
-        tmp="$(querystr ".http.$http.redirect")"
+        tmp="$(querystr "$k.redirect")"
         [[ -z $tmp ]] || ((count++))
 
-        tmp="$(querystr ".http.$http.root")"
+        tmp="$(querystr "$k.root")"
         if [[ -n $tmp ]]; then
             ((count++))
             [[ -d "$tmp" ]] || errx 3 "$tmp not found"
         fi
 
-        tmp="$(querystr ".http.$http.upstream.host")"
+        tmp="$(querystr "$k.upstream.host")"
         [[ -z $tmp ]] || ((count++))
 
         if [[ $count -eq 0 ]]; then
@@ -621,28 +634,31 @@ validate_http_cfgs() {
 }
 
 validate_stream_cfgs() {
+    local k
     local stream
     local tmp
 
     [[ $(querystr ".stream|length") -gt 0 ]] || return 0
 
     while read -r stream; do
+        k=".stream[\"$stream\"]"
+
         # Validate custom is valid yaml
-        querystr ".stream.$stream.custom[]?" >/dev/null || exit 3;
+        querystr "$k.custom[]?" >/dev/null || exit 3;
 
         # Needs a listener defined
-        tmp="$(querystr ".stream.$stream.listen")"
+        tmp="$(querystr "$k.listen")"
         [[ -n $tmp ]] || errx 3 "$stream has no listen defined"
 
         # The proto must be tcp or udp
-        tmp="$(querystr ".stream.$stream.proto")"
+        tmp="$(querystr "$k.proto")"
         case "${tmp,,}" in
             ""|"tcp"|"udp") ;;
             *) errx 3 "$stream has invalid proto $tmp"
         esac
 
         # Best (low) effort validation of timeout format
-        tmp="$(querystr ".stream.$stream.timeout.connect")"
+        tmp="$(querystr "$k.timeout.connect")"
         case "$tmp" in
             "") ;;
             *[0-9]"ms") ;;
@@ -656,7 +672,7 @@ validate_stream_cfgs() {
             *) errx 3 "$stream has invalid connect timeout" ;;
         esac
 
-        tmp="$(querystr ".stream.$stream.timeout.proxy")"
+        tmp="$(querystr "$k.timeout.proxy")"
         case "$tmp" in
             "") ;;
             *[0-9]"ms") ;;
@@ -671,7 +687,7 @@ validate_stream_cfgs() {
         esac
 
         # Needs an upstream defined
-        tmp="$(querystr ".stream.$stream.upstream")"
+        tmp="$(querystr "$k.upstream")"
         [[ -n $tmp ]] || errx 3 "$stream has no upstream defined"
     done < <(querystr ".stream|keys|.[]"); unset stream
 }
@@ -708,6 +724,7 @@ deps+=("head")
 deps+=("nginx")
 deps+=("sed")
 deps+=("tail")
+deps+=("tr")
 deps+=("yq")
 check_deps
 
