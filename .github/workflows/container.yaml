@@ -16,6 +16,7 @@ jobs:
         run: git pull --tags origin main
       - name: Format latest tag for Docker
         run: |
+          git log --pretty=tformat:"%h %s" | head -n 1
           t="$(git tag -l | sort -V | tail -n 1)"
           echo "LVER=$t" | tee -a "$GITHUB_ENV"
           echo "SVER=${t%%.*}" | tee -a "$GITHUB_ENV"
