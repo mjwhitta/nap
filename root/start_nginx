@@ -124,13 +124,13 @@ generate_http_cfgs() {
 
         # Check for subdomains
         unset subs
-        if [[ "$http" != "default" ]]; then
+        if [[ "${http,,}" != "default" ]]; then
             while read -r sub; do
                 subs+=("$sub")
             done < <(querystr ".http.$http.subdomains[]?")
             unset sub
 
-            [[ ${#subs[@]} -gt 0 ]] || subs+=("$http")
+            [[ ${#subs[@]} -gt 0 ]] || subs+=("${http,,}")
         fi
 
         # Determine server name from subs
@@ -155,8 +155,8 @@ ${cert:+  listen [::]:443 ${default:+default_server }${http2:+http2 }ssl;}
   server_name ${server:-_};
 
   # Logs
-  access_log /nap/data/logs/$http.access.log;
-  error_log /nap/data/logs/$http.error.log;
+  access_log /nap/data/logs/${http,,}.access.log;
+  error_log /nap/data/logs/${http,,}.error.log;
 
 ${cert:+  # TLS certs}
 ${cert:+  ssl_certificate $cert.chain.pem;}
@@ -337,6 +337,9 @@ EOF
         background: #${button:-073642};
         border: 1px solid #${border:-268bd2};
       }
+      a {
+        text-decoration: none;
+      }
       body {
         background: #${background:-002b36};
         color: #${foreground:-839496};
@@ -355,7 +358,7 @@ EOF
             sub="$(querystr ".http.$http.subdomains[0]")"
 
             cat <<EOF
-      <a href="" id="$http">
+      <a href="" id="${http,,}">
         <div class="w3-card-4">
           <div class="w3-container w3-hover-shadow">
             <h1>$http</h1>
@@ -363,9 +366,9 @@ EOF
         </div>
       </a>
       <script>
-        document.getElementById("$http").setAttribute(
+        document.getElementById("${http,,}").setAttribute(
           "href",
-          "http${cert:+s}://${sub:-$http}." + window.location.host
+          "http${cert:+s}://${sub:-${http,,}}." + window.location.host
         );
       </script>
 EOF
