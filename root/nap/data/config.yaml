@@ -17,15 +17,26 @@ http:
   example:
     # Adding a cert enables HTTPS. This could be a cert from the PKI
     # section, or you can Bring Your Own Certs (BYOC). See
-    # compose.yaml for examples. If using the default PKI, you do not
-    # need to specify that, otherwise use the format <pki>/<cert>.
-    # There is a special case for BYOC. You can put your certs (say
-    # Let's Encrypt) in a directory and mount them to /byoc. Files
+    # compose.yaml for examples. The format is <pki>/<cert>. If
+    # unspecified, the <pki> defaults to "default". There are two
+    # special cases for <pki>:
+    #
+    # The first is for BYOC. You can put your certs (Let's Encrypt,
+    # ZeroSSL, etc...) in a directory and mount them to /byoc. Files
     # should be named <cert>.chain.pem and <cert>.key.pem. You can
     # then use them with byoc/<cert>.
     #
-    #cert: <pki>/example.com
-    #cert: byoc/example.com
+    # The second is for Let's Encrypt specifically. Let's Encrypt
+    # appears to use a folder heirarchy like <domain>/fullchain.pem
+    # and <domain>/privkey.pem. So that you don't need to move or
+    # rename files, you can use /letsencrypt/<domains> and NAP will
+    # find fullchain.pem and privkey.pem in the /byoc/<domain>
+    # directory. Make sure to mount your domain folders to /byoc.
+    #
+    #cert: example.com # Default PKI
+    #cert: <pki>/example.com # Named PKI
+    #cert: byoc/example.com # BYOC
+    #cert: letsencrypt/example.com # BYOC with Let's Encrypt
     cert: example.com
 
     # You can add custom nginx here. Be careful as you can easily
@@ -40,6 +51,12 @@ http:
         #  ...
         #  rewrite ^/hidden(.*)$ $1 break;
         #}
+
+    # This config option is optional but can be used to pin this
+    # service to a particular domain. By default the generated Nginx
+    # configs will listen on "<subdomain>.*". Using this you could pin
+    # to "<subdomain>.example.com".
+    domain: example.com
 
     # Proxy additional locations. Locations can be configured with a
     # "redirect", "root", or "upstream" (just like a top-level http
@@ -86,7 +103,8 @@ http:
     #root: /www
 
     # Specify subdomains to reach this service. If none are specified,
-    # then the service name is used.
+    # then the service name is used. The service name is normalized by
+    # removing spaces and symbols then converting to lowercase.
     subdomains:
       - www
 

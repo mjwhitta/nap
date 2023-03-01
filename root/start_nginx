@@ -85,6 +85,7 @@ generate_http_cfgs() {
     local http
     local http2
     local k
+    local key
     local pki
     local server
     local sub
@@ -109,20 +110,34 @@ generate_http_cfgs() {
 
         # Check for cert
         cert="$(querystr "$k.cert")"
+        unset key
 
         # Transform cert into filepath
         case "$cert" in
             "") ;;
-            "byoc/"*) cert="/$cert" ;;
+            "byoc/"*)
+                key="/$cert.key.pem"
+                cert="/$cert.chain.pem"
+                ;;
+            "letsencrypt/"*)
+                key="/byoc/${cert#*/}/privkey.pem"
+                cert="/byoc/${cert#*/}/fullchain.pem"
+                ;;
             *"/"*)
                 pki="${cert%/*}"
-                cert="/nap/data/pki/${pki// /_}/pems/${cert##*/}"
+                key="/nap/data/pki/$pki/pems/${cert##*/}.key.pem"
+                cert="/nap/data/pki/$pki/pems/${cert##*/}.chain.pem"
                 ;;
-            *) cert="/nap/data/pki/default/pems/$cert" ;;
+            *)
+                key="/nap/data/pki/default/pems/$cert.key.pem"
+                cert="/nap/data/pki/default/pems/$cert.chain.pem"
+                ;;
         esac
 
         # Store other configuration values
         custom="$(querystr "$k.custom[]?")"
+        domain="$(querystr "$k.domain")"
+        domain="${domain:-*}" # Default to wildcard
 
         # Store options
         block="$(querybool "$k.options.block_exploits")"
@@ -147,8 +162,8 @@ generate_http_cfgs() {
         fi
 
         # Determine server name from subs
-        server="${subs[*]// /.* }"
-        [[ -z $server ]] || server+=".*"
+        server="${subs[*]}"
+        [[ -z $server ]] || server="${server// /.$domain }.$domain"
 
         unset default
         [[ -n $server ]] || default="true"
@@ -173,8 +188,8 @@ ${cert:+  listen [::]:443 ${default:+default_server }${http2:+http2 }ssl;}
   error_log /nap/data/logs/$tmp.error.log;
 
 ${cert:+  # TLS certs}
-${cert:+  ssl_certificate $cert.chain.pem;}
-${cert:+  ssl_certificate_key $cert.key.pem;}
+${cert:+  ssl_certificate $cert;}
+${cert:+  ssl_certificate_key $key;}
 
 ${block:+  # Block common exploits}
 ${block:+  include /nap/sys/include/block_exploits.conf;}
@@ -530,29 +545,42 @@ validate_http_cfgs() {
 
         # Check for cert
         cert="$(querystr "$k.cert")"
+        unset key
 
         # Transform cert into filepath
         case "$cert" in
             "") ;;
-            "byoc/"*) cert="/$cert" ;;
+            "byoc/"*)
+                key="/$cert.key.pem"
+                cert="/$cert.chain.pem"
+                ;;
+            "letsencrypt/"*)
+                key="/byoc/${cert#*/}/privkey.pem"
+                cert="/byoc/${cert#*/}/fullchain.pem"
+                ;;
             *"/"*)
                 pki="${cert%/*}"
-                cert="/nap/data/pki/${pki// /_}/pems/${cert##*/}"
+                key="/nap/data/pki/$pki/pems/${cert##*/}.key.pem"
+                cert="/nap/data/pki/$pki/pems/${cert##*/}.chain.pem"
                 ;;
-            *) cert="/nap/data/pki/default/pems/$cert" ;;
+            *)
+                key="/nap/data/pki/default/pems/$cert.key.pem"
+                cert="/nap/data/pki/default/pems/$cert.chain.pem"
+                ;;
         esac
 
         # Validate cert exists, if configured
         if [[ -n $cert ]]; then
-            if [[ ! -f "$cert.chain.pem" ]]; then
-                errx 3 "$cert.chain.pem not found"
-            elif [[ ! -f "$cert.key.pem" ]]; then
-                errx 3 "$cert.key.pem not found"
+            if [[ ! -f "$cert" ]]; then
+                errx 3 "$cert not found"
+            elif [[ ! -f "$key" ]]; then
+                errx 3 "$key not found"
             fi
         fi
 
         # Validate other configuration values
         querystr "$k.custom[]?" >/dev/null || exit 3;
+        querystr "$k.domain" >/dev/null || exit 3;
 
         # Validate options
         querybool "$k.options.block_exploits" >/dev/null || exit 3

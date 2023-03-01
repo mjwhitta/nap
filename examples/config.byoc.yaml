@@ -1,9 +1,15 @@
 # This example shows how to use a BYOC cert like Let's Encrypt.
 
 http:
-  default:
+  byoc_example:
     # You will need to mount your certs directory to /byoc and ensure
     # you've renamed the cert and key to example.com.chain.pem and
     # example.com.key.pem.
     cert: byoc/example.com
+    root: /nap/www
+  letsencrypt_example:
+    # You will need to mount your certs directory to /byoc and ensure
+    # there exists example.com/fullchain.pem and
+    # example.com/privkey.pem.
+    cert: letsencrypt/example.com
     root: /nap/www

@@ -1,7 +1,7 @@
 # This example is very similar to one I use.
 
 http:
-  adguard:
+  AdGuard:
     cert: example.com
     options:
       block_exploits: true
@@ -15,6 +15,20 @@ http:
     upstream:
       host: adguard
       port: 3000
+  Blocky:
+    cert: example.com
+    upstream:
+      host: blocky
+      port: 4000
+  Blocky (disable):
+    cert: example.com
+    redirect: https://blocky.example.com/api/blocking/disable#
+  Blocky (enable):
+    cert: example.com
+    redirect: https://blocky.example.com/api/blocking/enable#
+  Blocky (status):
+    cert: example.com
+    redirect: https://blocky.example.com/api/blocking/status#
   default:
     cert: example.com
     options:
@@ -22,7 +36,7 @@ http:
       force_tls: true
       http2_support: true
     root: /nap/www
-  gitea:
+  Gitea:
     cert: example.com
     options:
       block_exploits: true
@@ -35,7 +49,7 @@ http:
     upstream:
       host: gitea
       port: 3000
-  grafana:
+  Grafana:
     cert: example.com
     options:
       block_exploits: true
@@ -46,7 +60,7 @@ http:
       host: grafana
       port: 3000
   # Good example of a container utilizing subpaths.
-  guac:
+  Guac:
     cert: example.com
     locations:
       guacamole:
@@ -59,7 +73,7 @@ http:
       http2_support: true
       websocket_support: true
     redirect: /guacamole
-  syncthing:
+  Syncthing:
     cert: example.com
     options:
       block_exploits: true
