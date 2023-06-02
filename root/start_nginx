@@ -79,6 +79,10 @@ generate_http_cfgs() {
     local cert
     local custom
     local default
+    local disableIPv4
+    local disableIPv6
+    local enableIPv4
+    local enableIPv6
     local forcetls
     local hsts
     local hstssubs
@@ -142,6 +146,11 @@ generate_http_cfgs() {
         # Store options
         block="$(querybool "$k.options.block_exploits")"
         cache="$(querybool "$k.options.cache_assets")"
+        unset enableIPv4 enableIPv6
+        disableIPv4="$(querybool "$k.options.disableIPv4")"
+        [[ -n $disableIPv4 ]] || enableIPv4="true"
+        disableIPv6="$(querybool "$k.options.disableIPv6")"
+        [[ -n $disableIPv6 ]] || enableIPv6="true"
         forcetls="$(querybool "$k.options.force_tls")"
         hsts="$(querybool "$k.options.hsts")"
         hstssubs="$(querybool "$k.options.hsts_subdomains")"
@@ -173,12 +182,12 @@ generate_http_cfgs() {
 # $http
 server {
   # HTTP ports
-  listen 80${default:+ default_server};
-  listen [::]:80${default:+ default_server};
+  ${enableIPv4:+listen 80${default:+ default_server};}
+  ${enableIPv6:+listen [::]:80${default:+ default_server};}
 
 ${cert:+  # HTTPS ports${http2:+ with HTTP/2 support}}
-${cert:+  listen 443 ${default:+default_server }${http2:+http2 }ssl;}
-${cert:+  listen [::]:443 ${default:+default_server }${http2:+http2 }ssl;}
+${enableIPv4:+${cert:+  listen 443 ${default:+default_server }${http2:+http2 }ssl;}}
+${enableIPv6:+${cert:+  listen [::]:443 ${default:+default_server }${http2:+http2 }ssl;}}
 
   # Subdomains
   server_name ${server:-_};
@@ -585,6 +594,8 @@ validate_http_cfgs() {
         # Validate options
         querybool "$k.options.block_exploits" >/dev/null || exit 3
         querybool "$k.options.cache_assets" >/dev/null || exit 3
+        querybool "$k.options.disableIPv4" >/dev/null || exit 3
+        querybool "$k.options.disableIPv6" >/dev/null || exit 3
         forcetls="$(querybool "$k.options.force_tls")" || exit 3
         tmp="$(querybool "$k.options.hsts")" || exit 3
         [[ -z $tmp ]] || forcetls="true"
