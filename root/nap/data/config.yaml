@@ -78,8 +78,10 @@ http:
       cache_assets: false
       # Optionally disable IPv4 or IPv6 in case the host OS has also
       # disabled.
-      disableIPv4: false
-      disableIPv6: false
+      disable_ipv4: false
+      disable_ipv6: false
+      # Optionally log to /dev/null.
+      disable_log: false
       # Always redirect HTTP to HTTPS. You could also not expose port
       # 80 in your compose.yaml instead.
       force_tls: false
