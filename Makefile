@@ -3,16 +3,18 @@ VERSION := $(subst v,,$(VERSION))
 MAJOR := $(firstword $(subst ., ,$(VERSION)))
 VERSION := $(subst $(MAJOR).,,$(VERSION))
 MINOR := $(firstword $(subst ., ,$(VERSION)))
-MINOR := $(shell echo "$$(($(MINOR)+1))")
+VERSION := $(subst $(MINOR).,,$(VERSION))
+BUILD := $(firstword $(subst ., ,$(VERSION)))
+BUILD := $(shell echo "$$(($(BUILD)+1))")
 VERSION :=
 
 all:
 	@./build
 
 bump:
-	@echo "v$(MAJOR).$(MINOR).0" >./root/nap/sys/version
+	@echo "v$(MAJOR).$(MINOR).$(BUILD)" >./root/nap/sys/version
 	@git commit -am "Bumped version"
-	@git tag v$(MAJOR).$(MINOR).0
+	@git tag v$(MAJOR).$(MINOR).$(BUILD)
 	@git push
 	@git push --tags
 
