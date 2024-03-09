@@ -1,5 +1,7 @@
 # This example is very similar to one I use.
 
+skip_validation: true
+
 http:
   AdGuard:
     cert: example.com

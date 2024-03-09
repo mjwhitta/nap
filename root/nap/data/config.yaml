@@ -1,3 +1,6 @@
+# Only use this if you KNOW your config is good
+skip_validation: true
+
 # HTTP services to configure for reverse proxy.
 http:
   # Default is a special service that does not accept subdomains. It

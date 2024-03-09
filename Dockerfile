@@ -2,7 +2,7 @@ FROM alpine:latest
 
 # Use bash b/c it's better
 RUN apk --no-cache --update add bash && \
-    rm -fr /tmp/* /var/{cache/apk,tmp}/*
+    rm -f -r /tmp/* /var/{cache/apk,tmp}/*
 SHELL ["/bin/bash", "-c"]
 
 # 1. Install dependencies

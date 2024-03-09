@@ -73,7 +73,7 @@ EOF
     done < <(querystr ".pki|keys|.[]"); unset pki
 }
 
-generate_http_cfgs() {
+generate_http_cfg() {
     local block
     local cache
     local cert
@@ -87,9 +87,9 @@ generate_http_cfgs() {
     local forcetls
     local hsts
     local hstssubs
-    local http
+    local http="$1"
     local http2
-    local k
+    local k=".http[\"$1\"]"
     local key
     local loga
     local loge
@@ -100,93 +100,83 @@ generate_http_cfgs() {
     local tmp
     local ws
 
-    # Delete existing Nginx configs
-    rm -f -r /nap/data/cfgs/http.d
-    mkdir -p /nap/data/cfgs/http.d
+    # Normalize
+    tmp="$(tr -d "[:punct:][:space:]" <<<"${http,,}")"
+    loga="/nap/data/logs/$tmp.access.log"
+    loge="/nap/data/logs/$tmp.error.log"
 
-    [[ $(querystr ".http|length") -gt 0 ]] || return 0
+    subinfo "Creating $http Nginx http config"
 
-    # Create Nginx configs
-    while read -r http; do
-        k=".http[\"$http\"]"
+    # Check for cert
+    cert="$(querystr "$k.cert")"
+    unset key
 
-        # Normalize
-        tmp="$(tr -d "[:punct:][:space:]" <<<"${http,,}")"
-        loga="/nap/data/logs/$tmp.access.log"
-        loge="/nap/data/logs/$tmp.error.log"
+    # Transform cert into filepath
+    case "$cert" in
+        "") ;;
+        "byoc/"*)
+            key="/$cert.key.pem"
+            cert="/$cert.chain.pem"
+            ;;
+        "letsencrypt/"*)
+            key="/byoc/${cert#*/}/privkey.pem"
+            cert="/byoc/${cert#*/}/fullchain.pem"
+            ;;
+        *"/"*)
+            pki="${cert%/*}"
+            key="/nap/data/pki/$pki/pems/${cert##*/}.key.pem"
+            cert="/nap/data/pki/$pki/pems/${cert##*/}.chain.pem"
+            ;;
+        *)
+            key="/nap/data/pki/default/pems/$cert.key.pem"
+            cert="/nap/data/pki/default/pems/$cert.chain.pem"
+            ;;
+    esac
 
-        subinfo "Creating $http Nginx http config"
+    # Store other configuration values
+    custom="$(querystr "$k.custom[]?")"
+    domain="$(querystr "$k.domain")"
+    domain="${domain:-*}" # Default to wildcard
 
-        # Check for cert
-        cert="$(querystr "$k.cert")"
-        unset key
+    # Store options
+    block="$(querybool "$k.options.block_exploits")"
+    cache="$(querybool "$k.options.cache_assets")"
+    unset enableIPv4 enableIPv6
+    disableIPv4="$(querybool "$k.options.disable_ipv4")"
+    [[ -n $disableIPv4 ]] || enableIPv4="true"
+    disableIPv6="$(querybool "$k.options.disable_ipv6")"
+    [[ -n $disableIPv6 ]] || enableIPv6="true"
+    disableLog="$(querybool "$k.options.disable_log")"
+    forcetls="$(querybool "$k.options.force_tls")"
+    hsts="$(querybool "$k.options.hsts")"
+    hstssubs="$(querybool "$k.options.hsts_subdomains")"
+    http2="$(querybool "$k.options.http2_support")"
+    ws="$(querybool "$k.options.websocket_support")"
 
-        # Transform cert into filepath
-        case "$cert" in
-            "") ;;
-            "byoc/"*)
-                key="/$cert.key.pem"
-                cert="/$cert.chain.pem"
-                ;;
-            "letsencrypt/"*)
-                key="/byoc/${cert#*/}/privkey.pem"
-                cert="/byoc/${cert#*/}/fullchain.pem"
-                ;;
-            *"/"*)
-                pki="${cert%/*}"
-                key="/nap/data/pki/$pki/pems/${cert##*/}.key.pem"
-                cert="/nap/data/pki/$pki/pems/${cert##*/}.chain.pem"
-                ;;
-            *)
-                key="/nap/data/pki/default/pems/$cert.key.pem"
-                cert="/nap/data/pki/default/pems/$cert.chain.pem"
-                ;;
-        esac
+    [[ -z $disableLog ]] || loga="/dev/null"
+    [[ -z $disableLog ]] || loge="/dev/null"
+    [[ -z $hstssubs ]] || hsts="true"
+    [[ -z $hsts ]] || forcetls="true"
 
-        # Store other configuration values
-        custom="$(querystr "$k.custom[]?")"
-        domain="$(querystr "$k.domain")"
-        domain="${domain:-*}" # Default to wildcard
+    # Check for subdomains
+    unset subs
+    if [[ "${http,,}" != "default" ]]; then
+        while read -r sub; do
+            subs+=("$sub")
+        done < <(querystr "$k.subdomains[]?"); unset sub
 
-        # Store options
-        block="$(querybool "$k.options.block_exploits")"
-        cache="$(querybool "$k.options.cache_assets")"
-        unset enableIPv4 enableIPv6
-        disableIPv4="$(querybool "$k.options.disable_ipv4")"
-        [[ -n $disableIPv4 ]] || enableIPv4="true"
-        disableIPv6="$(querybool "$k.options.disable_ipv6")"
-        [[ -n $disableIPv6 ]] || enableIPv6="true"
-        disableLog="$(querybool "$k.options.disable_log")"
-        forcetls="$(querybool "$k.options.force_tls")"
-        hsts="$(querybool "$k.options.hsts")"
-        hstssubs="$(querybool "$k.options.hsts_subdomains")"
-        http2="$(querybool "$k.options.http2_support")"
-        ws="$(querybool "$k.options.websocket_support")"
+        [[ ${#subs[@]} -gt 0 ]] || subs+=("$tmp")
+    fi
 
-        [[ -z $disableLog ]] || loga="/dev/null"
-        [[ -z $disableLog ]] || loge="/dev/null"
-        [[ -z $hstssubs ]] || hsts="true"
-        [[ -z $hsts ]] || forcetls="true"
+    # Determine server name from subs
+    server="${subs[*]}"
+    [[ -z $server ]] || server="${server// /.$domain }.$domain"
 
-        # Check for subdomains
-        unset subs
-        if [[ "${http,,}" != "default" ]]; then
-            while read -r sub; do
-                subs+=("$sub")
-            done < <(querystr "$k.subdomains[]?"); unset sub
+    unset default
+    [[ -n $server ]] || default="true"
 
-            [[ ${#subs[@]} -gt 0 ]] || subs+=("$tmp")
-        fi
-
-        # Determine server name from subs
-        server="${subs[*]}"
-        [[ -z $server ]] || server="${server// /.$domain }.$domain"
-
-        unset default
-        [[ -n $server ]] || default="true"
-
-        sed -r "/^\s*$/d" \
-            >"/nap/data/cfgs/http.d/${http// /_}.conf" <<EOF
+    sed -r "/^\s*$/d" \
+        >"/nap/data/cfgs/http.d/${http// /_}.conf" <<EOF
 # $http
 server {
   # HTTP ports
@@ -238,7 +228,24 @@ $(
 $(generate_loc "" "$k")
 }
 EOF
+}
+
+generate_http_cfgs() {
+    local http
+
+    # Delete existing Nginx configs
+    rm -f -r /nap/data/cfgs/http.d
+    mkdir -p /nap/data/cfgs/http.d
+
+    [[ $(querystr ".http|length") -gt 0 ]] || return 0
+
+    # Create Nginx configs
+    while read -r http; do
+        generate_http_cfg "$http" &
     done < <(querystr ".http|keys|.[]"); unset http
+
+    # Wait for all jobs to finish
+    wait
 
     if [[ ! -f /nap/data/cfgs/http.d/default.conf ]]; then
         generate_http_default
@@ -435,43 +442,34 @@ EOF
 EOF
 }
 
-generate_stream_cfgs() {
+generate_stream_cfg() {
     local custom
-    local k
+    local k=".stream[\"$1\"]"
     local listen
     local proto
-    local stream
+    local stream="$1"
     local toconn
     local toproxy
     local upstream
 
-    # Delete existing Nginx configs
-    rm -f -r /nap/data/cfgs/stream.d
-    mkdir -p /nap/data/cfgs/stream.d
+    subinfo "Creating $stream Nginx stream config"
 
-    [[ $(querystr ".stream|length") -gt 0 ]] || return 0
+    # Store configuration values
+    custom="$(querystr "$k.custom[]?")"
+    listen="$(querystr "$k.listen")"
+    proto="$(querystr "$k.proto")"
+    toconn="$(querystr "$k.timeout.connect")"
+    toproxy="$(querystr "$k.timeout.proxy")"
+    upstream="$(querystr "$k.upstream")"
 
-    while read -r stream; do
-        k=".stream[\"$stream\"]"
+    case "${proto,,}" in
+        "") ;;
+        "tcp") unset proto ;;
+        "udp") proto="udp" ;;
+    esac
 
-        subinfo "Creating $stream Nginx stream config"
-
-        # Store configuration values
-        custom="$(querystr "$k.custom[]?")"
-        listen="$(querystr "$k.listen")"
-        proto="$(querystr "$k.proto")"
-        toconn="$(querystr "$k.timeout.connect")"
-        toproxy="$(querystr "$k.timeout.proxy")"
-        upstream="$(querystr "$k.upstream")"
-
-        case "${proto,,}" in
-            "") ;;
-            "tcp") unset proto ;;
-            "udp") proto="udp" ;;
-        esac
-
-        sed -r "/^\s*$/d" \
-            >"/nap/data/cfgs/stream.d/${stream// /_}.conf" <<EOF
+    sed -r "/^\s*$/d" \
+        >"/nap/data/cfgs/stream.d/${stream// /_}.conf" <<EOF
 $(
     [[ -z $custom ]] || echo "  # User's custom config"
     while IFS="" read -r line; do
@@ -486,7 +484,24 @@ ${toproxy:+  proxy_timeout $toproxy;}
   proxy_pass $upstream;
 }
 EOF
+}
+
+generate_stream_cfgs() {
+    local stream
+
+    # Delete existing Nginx configs
+    rm -f -r /nap/data/cfgs/stream.d
+    mkdir -p /nap/data/cfgs/stream.d
+
+    [[ $(querystr ".stream|length") -gt 0 ]] || return 0
+
+    # Create Nginx configs
+    while read -r stream; do
+        generate_stream_cfg "$stream" &
     done < <(querystr ".stream|keys|.[]"); unset stream
+
+    # Wait for all jobs to finish
+    wait
 }
 
 querybool() {
@@ -792,10 +807,12 @@ cfg="$($yq "." "$cfg")"
 # Create missing certs
 bootstrap_pki || exit "$?"
 
-info "Validating NAP config"
-validate_http_cfgs
-validate_stream_cfgs
-good "Success"
+if [[ -z $(querybool ".skip_validation") ]]; then
+    info "Validating NAP config"
+    validate_http_cfgs
+    validate_stream_cfgs
+    good "Success"
+fi
 
 # Generate configs
 info "Generating Nginx configs"
