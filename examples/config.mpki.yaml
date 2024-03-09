@@ -12,7 +12,9 @@ http:
 pki:
   default:
     ca: Nginx App Proxy (NAP) 1
-    certs: example1.com:*.example1.com
+    certs:
+      - example1.com:*.example1.com
   other:
     ca: Nginx App Proxy (NAP) 2
-    certs: example2.com:*.example2.com
+    certs:
+      - example2.com:*.example2.com

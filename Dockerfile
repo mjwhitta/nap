@@ -24,9 +24,9 @@ RUN set -o pipefail && \
         go install --ldflags "-s -w" --trimpath \
             github.com/mikefarah/yq/v4@latest && \
         mv /root/go/bin/yq /usr/local/bin && \
-        upx /usr/local/bin/{certify,yq} && \
-        apk --no-cache --update del go upx \
+        upx /usr/local/bin/{certify,yq} \
     ) && ( \
+        apk --no-cache --update del go upx && \
         rm -f -r /root/{.cache,go} /tmp/* /var/{cache/apk,tmp}/* \
     )
 
