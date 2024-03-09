@@ -4,20 +4,15 @@ networks:
 services:
   nap:
     environment:
-      # Your GID
-      - DKR_GID=1000
-      # Your UID
-      - DKR_UID=1000
+      - DKR_GID=1000 # Your GID
+      - DKR_UID=1000 # Your UID
     hostname: nap
     image: ghcr.io/mjwhitta/nap:latest
     networks:
-      # Put your other services on this network too
-      - nap
+      - nap # Put your other services on this network too
     ports:
-      # For HTTP
-      - "80:80"
-      # For HTTPS
-      - "443:443"
+      - "80:80" # For HTTP
+      - "443:443" # For HTTPS
     restart: unless-stopped
     volumes:
       # Mount BYOC directory, if you have Let's Encrypt or similar.
