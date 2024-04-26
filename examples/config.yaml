@@ -24,13 +24,13 @@ http:
       port: 4000
   Blocky (disable):
     cert: example.com
-    redirect: https://blocky.example.com/api/blocking/disable#
+    redirect: https://blocky.example.com/api/blocking/disable
   Blocky (enable):
     cert: example.com
-    redirect: https://blocky.example.com/api/blocking/enable#
+    redirect: https://blocky.example.com/api/blocking/enable
   Blocky (status):
     cert: example.com
-    redirect: https://blocky.example.com/api/blocking/status#
+    redirect: https://blocky.example.com/api/blocking/status
   default:
     cert: example.com
     options:

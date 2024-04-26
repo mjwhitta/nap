@@ -291,7 +291,7 @@ EOF
     if [[ -n $tmp ]]; then
         cat <<EOF
   location /$loc {
-    return 302 ${tmp%/}\$request_uri;
+    return 302 $tmp;
   }
 EOF
         return 0
@@ -357,6 +357,7 @@ generate_navdash() {
     local sub
 
     case "$(head -n 1 www/index.html)" in
+        # echo -n "nap" | md5sum | awk '{print $1}'
         "4d3b2b4b063b4e4ae9cc04579c253c99") ;;
         *) return 0 ;;
     esac
