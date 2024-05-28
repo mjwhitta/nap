@@ -180,12 +180,15 @@ generate_http_cfg() {
 # $http
 server {
   # HTTP ports
-  ${enableIPv4:+listen 80${default:+ default_server};}
-  ${enableIPv6:+listen [::]:80${default:+ default_server};}
+${enableIPv4:+  listen 80${default:+ default_server};}
+${enableIPv6:+  listen [::]:80${default:+ default_server};}
 
-${cert:+  # HTTPS ports${http2:+ with HTTP/2 support}}
-${enableIPv4:+${cert:+  listen 443 ${default:+default_server }${http2:+http2 }ssl;}}
-${enableIPv6:+${cert:+  listen [::]:443 ${default:+default_server }${http2:+http2 }ssl;}}
+${cert:+  # HTTPS ports}
+${enableIPv4:+${cert:+  listen 443 ${default:+default_server }ssl;}}
+${enableIPv6:+${cert:+  listen [::]:443 ${default:+default_server }ssl;}}
+
+${http2:+  # HTTP/2 support}
+${http2:+  http2 on;}
 
   # Subdomains
   server_name ${server:-_};
