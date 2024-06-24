@@ -18,10 +18,10 @@ RUN set -o pipefail && \
             sudo \
     ) && ( \
         apk --no-cache --update add go upx && \
-        go install --ldflags "-s -w" --trimpath \
+        go install --buildvcs=false --ldflags "-s -w" --trimpath \
             github.com/mjwhitta/pki/cmd/certify@latest && \
         mv /root/go/bin/certify /usr/local/bin && \
-        go install --ldflags "-s -w" --trimpath \
+        go install --buildvcs=false --ldflags "-s -w" --trimpath \
             github.com/mikefarah/yq/v4@latest && \
         mv /root/go/bin/yq /usr/local/bin && \
         upx /usr/local/bin/{certify,yq} \
