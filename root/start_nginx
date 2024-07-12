@@ -375,8 +375,8 @@ EOF
     info "Generating NavDash"
 
     background="$(querystr ".navdash.background")"
-    button="$(querystr ".navdash.button-background")"
-    border="$(querystr ".navdash.button-border")"
+    button="$(querystr ".navdash.\"button-background\"")"
+    border="$(querystr ".navdash.\"button-border\"")"
     foreground="$(querystr ".navdash.foreground")"
 
     cat >/nap/www/index.html <<EOF
@@ -512,7 +512,7 @@ querybool() {
     local k="$1"
     local v
 
-    v="$($yq -M -r "$k" <<<"$cfg")"
+    v="$($jq "$k" <<<"$cfg")"
     case "${v,,}" in
         ""|"false"|"null") return 0 ;;
         "true") echo "true"; return 0 ;;
@@ -524,7 +524,7 @@ querystr() {
     local k="$1"
     local v
 
-    v="$($yq -M -r "$k" <<<"$cfg")"
+    v="$($jq "$k" <<<"$cfg")"
     case "${v,,}" in
         ""|"null") return 0 ;;
     esac
@@ -764,7 +764,7 @@ validate_stream_cfgs() {
 declare -a args
 unset help
 color="true"
-yq="yq -M -r"
+jq="jq -c -M -r -S"
 
 # Parse command line options
 while [[ $# -gt 0 ]]; do
@@ -790,6 +790,7 @@ done
 declare -a deps
 deps+=("certify")
 deps+=("head")
+deps+=("jq")
 deps+=("nginx")
 deps+=("sed")
 deps+=("tail")
@@ -806,17 +807,15 @@ setup_nap
 # Read config from disk just once
 cfg="/nap/data/config.yaml"
 [[ -f "$cfg" ]] || errx 2 "$cfg not found"
-cfg="$($yq "." "$cfg")"
+cfg="$(yq -M -o json "." "$cfg")"
 
 # Create missing certs
 bootstrap_pki || exit "$?"
 
-if [[ -z $(querybool ".skip_validation") ]]; then
-    info "Validating NAP config"
-    validate_http_cfgs
-    validate_stream_cfgs
-    good "Success"
-fi
+info "Validating NAP config"
+validate_http_cfgs
+validate_stream_cfgs
+good "Success"
 
 # Generate configs
 info "Generating Nginx configs"

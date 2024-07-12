@@ -12,6 +12,7 @@ RUN set -o pipefail && \
     ( \
         apk --no-cache --update upgrade && \
         apk --no-cache --update add \
+            jq \
             nginx-mod-http-headers-more \
             nginx-mod-stream \
             shadow \
