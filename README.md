@@ -35,3 +35,6 @@ some config examples for specific use cases.
 
 You can pull the container with `docker pull
 ghcr.io/mjwhitta/nap:latest` or build it locally with `./build`.
+
+**Note:** If you need to run NAP on the `host` network, you will need
+to change your `DKR_GID` and `DKR_UID` to `0`.
