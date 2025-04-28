@@ -74,6 +74,7 @@ EOF
 }
 
 generate_http_cfg() {
+    local autoindex
     local block
     local cache
     local cert
@@ -139,6 +140,7 @@ generate_http_cfg() {
     domain="${domain:-*}" # Default to wildcard
 
     # Store options
+    autoindex="$(querybool "$k.options.autoindex")"
     block="$(querybool "$k.options.block_exploits")"
     cache="$(querybool "$k.options.cache_assets")"
     unset enableIPv4 enableIPv6
@@ -196,6 +198,9 @@ ${http2:+  http2 on;}
   # Logs
   access_log $loga;
   error_log $loge;
+
+${autoindex:+  # Allow directory indexing}
+${autoindex:+  autoindex on;}
 
 ${cert:+  # TLS certs}
 ${cert:+  ssl_certificate $cert;}
@@ -619,6 +624,7 @@ validate_http_cfgs() {
         querystr "$k.domain" >/dev/null || exit 3;
 
         # Validate options
+        querybool "$k.options.autoindex" >/dev/null || exit 3
         querybool "$k.options.block_exploits" >/dev/null || exit 3
         querybool "$k.options.cache_assets" >/dev/null || exit 3
         querybool "$k.options.disable_ipv4" >/dev/null || exit 3

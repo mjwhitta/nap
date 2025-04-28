@@ -72,6 +72,8 @@ http:
 
     # All of the following options default to false, if not included.
     options:
+      # Allow for directory indexing
+      autoindex: false
       # Block common exploits like file inclusion, SQLi, XSS, etc...
       block_exploits: false
       # Enable caching for CSS, images, JavaScript, etc...
