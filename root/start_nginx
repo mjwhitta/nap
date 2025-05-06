@@ -279,19 +279,32 @@ generate_loc() {
     local lport
     local lscheme
     local loc="$1"
+    local root
     local tmp
 
-    if [[ -n $loc ]]; then
-        # Create alias, if defined
-        tmp="$(querystr "$k.alias")"
-        if [[ -n $tmp ]]; then
-            cat <<EOF
+    # Create alias, if defined
+    tmp="$(querystr "$k.alias")"
+    if [[ -n $tmp ]]; then
+        cat <<EOF
   location /$loc {
     alias ${tmp%/};
   }
 EOF
-            return 0
-        fi
+        return 0
+    fi
+
+    # Create file, if defined
+    tmp="$(querystr "$k.file")"
+    if [[ -n $tmp ]]; then
+        root="$(dirname "$tmp")"
+        [[ $root != "." ]] || unset root
+        cat <<EOF
+  location /$loc {
+      root ${root:-/nap/www};
+      try_files /${tmp##*/} /${tmp##*/};
+  }
+EOF
+        return 0
     fi
 
     # Create redirect, if defined
@@ -300,6 +313,18 @@ EOF
         cat <<EOF
   location /$loc {
     return 302 $tmp;
+  }
+EOF
+        return 0
+    fi
+
+    # Create respond, if defined
+    tmp="$(querystr "$k.respond")"
+    if [[ -n $tmp ]]; then
+        cat <<EOF
+  location /$loc {
+    default_type text/html;
+    return 200 '$tmp';
   }
 EOF
         return 0
@@ -658,8 +683,16 @@ validate_http_cfgs() {
                     [[ -d "$tmp" ]] || errx 3 "$tmp not found"
                 fi
 
+                # Check for file
+                tmp="$(querystr "$k.locations[\"$loc\"].file")"
+                [[ -z $tmp ]] || ((count++))
+
                 # Check for redirect
                 tmp="$(querystr "$k.locations[\"$loc\"].redirect")"
+                [[ -z $tmp ]] || ((count++))
+
+                # Check for respond
+                tmp="$(querystr "$k.locations[\"$loc\"].respond")"
                 [[ -z $tmp ]] || ((count++))
 
                 # Check for root
@@ -688,22 +721,40 @@ validate_http_cfgs() {
         # Validate upstream
         count="0"
 
+        # Check for alias
+        tmp="$(querystr "$k.alias")"
+        if [[ -n $tmp ]]; then
+            ((count++))
+            [[ -d "$tmp" ]] || errx 3 "$tmp not found"
+        fi
+
+        # Check for file
+        tmp="$(querystr "$k.file")"
+        [[ -z $tmp ]] || ((count++))
+
+        # Check for redirect
         tmp="$(querystr "$k.redirect")"
         [[ -z $tmp ]] || ((count++))
 
+        # Check for respond
+        tmp="$(querystr "$k.respond")"
+        [[ -z $tmp ]] || ((count++))
+
+        # Check for root
         tmp="$(querystr "$k.root")"
         if [[ -n $tmp ]]; then
             ((count++))
             [[ -d "$tmp" ]] || errx 3 "$tmp not found"
         fi
 
+        # Check for upstream host
         tmp="$(querystr "$k.upstream.host")"
         [[ -z $tmp ]] || ((count++))
 
         if [[ $count -eq 0 ]]; then
-            errx 3 "$http's upstream has no targets"
+            errx 3 "$http's root location has no targets"
         elif [[ $count -gt 1 ]]; then
-            errx 3 "$http's upstream has multiple targets"
+            errx 3 "$http's root location has multiple targets"
         fi
     done < <(querystr ".http|keys|.[]"); unset http
 }

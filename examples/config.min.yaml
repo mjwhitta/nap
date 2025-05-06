@@ -3,10 +3,15 @@
 http:
   default:
     locations:
+      alt:
+        alias: /nap/www
+      anything:
+        file: index.html
       dd/go:
         redirect: https://start.duckduckgo.com/html
+      works:
+        respond: "<html><body><h1>It works!</h1></body></html>"
       index.html:
         root: /nap/www
-      works:
-        alias: /nap/www
-    root: /nap/www
+    upstream:
+      host: example.com

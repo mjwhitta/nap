@@ -2,7 +2,7 @@
 http:
   # Default is a special service that does not accept subdomains. It
   # has all other supported configurations. It is not required. If you
-  # choose not to use "default", nginx will return a 404 on port 80
+  # choose not to use "default", Nginx will return a 404 on port 80
   # and a 502 on port 443.
   default:
     # If you don't mount over /nap/www, it will be a generated
@@ -15,6 +15,14 @@ http:
   # all comments (after reading) so you can copy/paste easier. See
   # examples/ for some "realistic" use cases.
   example:
+    # You must configure exactly one target. A target is either an
+    # "alias", "file", "redirect", "respond", "root", or "upstream"
+    # key. See below for examples of each.
+
+    # Similar to "root". See Nginx documentation on best practices for
+    # alias vs root.
+    #alias: /nap/www
+
     # Adding a cert enables HTTPS. This could be a cert from the PKI
     # section, or you can Bring Your Own Certs (BYOC). See
     # compose.yaml for examples. The format is <pki>/<cert>. If
@@ -39,7 +47,7 @@ http:
     #cert: letsencrypt/example.com # BYOC with Let's Encrypt
     cert: example.com
 
-    # You can add custom nginx here. Be careful as you can easily
+    # You can add custom Nginx here. Be careful as you can easily
     # break things! Below is an example for filtering on User-Agent.
     custom:
       - |
@@ -58,17 +66,29 @@ http:
     # to "<subdomain>.example.com".
     domain: example.com
 
-    # Proxy additional locations. Locations can be configured with a
-    # "redirect", "root", or "upstream" (just like a top-level http
-    # service), but can also use "alias". See nginx documentation on
-    # best practices for alias vs root.
+    # Serve a static file, regardless of path. The default root for
+    # the file is /nap/www and can be left out, otherwise use absolute
+    # path.
+    #file: index.html
+
+    # Proxy additional locations. Locations can be configured with
+    # targets, just like the top-level http service.
     locations:
+      alt:
+        alias: /nap/www
+      anything:
+        file: /nap/www/index.html
       dd/go:
         redirect: https://start.duckduckgo.com/html
+      works:
+        respond: "<html><body><h1>It works!</h1></body></html>"
       index.html:
         root: /nap/www
-      works:
-        alias: /nap/www
+      service:
+        upstream:
+          host: app_host
+          port: 80
+          scheme: http
 
     # All of the following options default to false, if not included.
     options:
@@ -101,13 +121,15 @@ http:
       # Enable support for websockets.
       websocket_support: false
 
-    # Redirect to host or subpath. This is an alternative to root and
-    # upstream.
+    # Redirect to host or subpath.
     #redirect: https://example.com
     #redirect: /path
 
-    # Root serves a directory. This is an alternative to redirect and
-    # upstream. If using Docker, make sure you mount your directory.
+    # Respond with specific text, regardless of path.
+    respond: "<html><body><h1>It works!</h1></body></html>"
+
+    # Root serves a directory. If using Docker, make sure you mount
+    # your directory.
     #root: /www
 
     # Specify subdomains to reach this service. If none are specified,
@@ -116,13 +138,12 @@ http:
     subdomains:
       - www
 
-    # Upstream will proxy to an upstream host. This is an alternative
-    # to redirect and root. The port defaults to 80 or 443, depending
-    # on scheme. The scheme defaults to http.
-    upstream:
-      host: app_host
-      port: 3000
-      scheme: http
+    # Upstream will proxy to an upstream host. The port defaults to 80
+    # or 443, depending on scheme. The scheme defaults to http.
+    #upstream:
+    #  host: app_host
+    #  port: 3000
+    #  scheme: http
 
 # This section is optional and lets you customize the colors of the
 # navdash. The defaults use the Solarized Dark palette.
@@ -175,8 +196,9 @@ pki:
 stream:
   # The name here is arbitrary and only used to name the conf file.
   backend:
-    # You can add custom nginx here. Be careful as you can easily
-    # break things! Below is an example for defining an stream block.
+    # You can add custom Nginx configuration here. Be careful as you
+    # can easily break things! Below is an example for defining a
+    # stream block.
     custom:
       - |
         upstream backend {
@@ -197,7 +219,7 @@ stream:
 
     # Under timeout you can specify the proxy connect timeout and
     # proxy timeout. If not specified, the defaults are the same as
-    # nginx's defaults.
+    # Nginx's defaults.
     timeout:
       connect: 1s
       proxy: 3s
