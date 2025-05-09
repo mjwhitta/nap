@@ -12,6 +12,7 @@ RUN set -o pipefail && \
     ( \
         apk --no-cache --update upgrade && \
         apk --no-cache --update add \
+            git \
             jq \
             nginx-mod-http-headers-more \
             nginx-mod-stream \
@@ -23,11 +24,11 @@ RUN set -o pipefail && \
             github.com/mjwhitta/pki/cmd/certify@latest && \
         mv /root/go/bin/certify /usr/local/bin && \
         go install --buildvcs=false --ldflags "-s -w" --trimpath \
-            github.com/mikefarah/yq/v4@latest && \
+            github.com/mikefarah/yq/v4@c59fa8d && \
         mv /root/go/bin/yq /usr/local/bin && \
         upx /usr/local/bin/{certify,yq} \
     ) && ( \
-        apk --no-cache --update del go upx && \
+        apk --no-cache --update del git go upx && \
         rm -f -r /root/{.cache,go} /tmp/* /var/{cache/apk,tmp}/* \
     )
 
