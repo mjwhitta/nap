@@ -855,8 +855,7 @@ deps+=("jq")
 deps+=("nginx")
 deps+=("sed")
 deps+=("tail")
-deps+=("tr")
-deps+=("yq")
+deps+=("y2j")
 check_deps
 
 # Check for valid params
@@ -868,8 +867,8 @@ setup_nap
 # Read config from disk just once
 cfg="/nap/data/config.yaml"
 [[ -f "$cfg" ]] || errx 2 "$cfg not found"
-yq -M -o json "." "$cfg" || errx 3 "invalid yaml syntax"
-cfg="$(yq -M -o json "." "$cfg")"
+y2j "$cfg" || errx 3 "invalid yaml syntax"
+cfg="$(y2j "$cfg")"
 
 # Create missing certs
 bootstrap_pki || exit "$?"
