@@ -342,6 +342,16 @@ EOF
     lport="$(querystr "$k.upstream.port")"
     lscheme="$(querystr "$k.upstream.scheme")"
 
+    if [[ -z $lhost ]]; then
+        # No targets were defined
+        cat <<EOF
+  location /$loc {
+    return 404;
+  }
+EOF
+        return 0
+    fi
+
     [[ -n $lscheme ]] || lscheme="http" # default value
 
     if [[ -z $lport ]]; then
