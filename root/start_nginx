@@ -753,9 +753,7 @@ validate_http_cfgs() {
         tmp="$(querystr "$k.upstream.host")"
         [[ -z $tmp ]] || ((count++))
 
-        if [[ $count -eq 0 ]]; then
-            errx 3 "$http's root location has no targets"
-        elif [[ $count -gt 1 ]]; then
+        if [[ $count -gt 1 ]]; then
             errx 3 "$http's root location has multiple targets"
         fi
     done < <(querystr ".http|keys|.[]"); unset http
