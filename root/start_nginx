@@ -712,9 +712,7 @@ validate_http_cfgs() {
                 )"
                 [[ -z $tmp ]] || ((count++))
 
-                if [[ $count -eq 0 ]]; then
-                    errx 3 "$http's location $loc has no targets"
-                elif [[ $count -gt 1 ]]; then
+                if [[ $count -gt 1 ]]; then
                     errx 3 \
                         "$http's location $loc has multiple targets"
                 fi
