@@ -164,6 +164,10 @@ navdash:
   button-border: 268bd2
   foreground: 839496
 
+# Additional Alpine packages to install on startup. This is optional.
+pkgs:
+  - nginx-mod-http-perl
+
 # Default PKI information and certs to generate.
 #
 # If you are using BYOC, then you can delete this whole section.
@@ -198,10 +202,6 @@ pki:
     country: US
     state:
     unit:
-
-# Additional Alpine packages to install on startup. This is optional.
-pkgs:
-  - perl
 
 # Stream services to configure. These three examples are from:
 #

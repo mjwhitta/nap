@@ -591,6 +591,7 @@ setup_nap() {
 
     # Create needed directories
     mkdir -p /nap/data/{cfgs,logs,pki}
+    ln -f -s /usr/lib/nginx/modules /nap/data/modules
 
     # Fix perms
     chmod -R ug=rwX,o-rwx /nap 2>/dev/null || true
