@@ -79,6 +79,7 @@ generate_http_cfg() {
     local cache
     local cert
     local custom
+    local customHTTP
     local default
     local disableIPv4
     local disableIPv6
@@ -100,7 +101,6 @@ generate_http_cfg() {
     local -a subs
     local title="$1"
     local tmp="${title// /}"
-    local ws
 
     subinfo "Creating $http Nginx http config"
 
@@ -132,6 +132,7 @@ generate_http_cfg() {
 
     # Store other configuration values
     custom="$(querystr "$k.custom[]?")"
+    customHTTP="$(querystr "$k.custom_http[]?")"
     domain="$(querystr "$k.domain")"
     domain="${domain:-*}" # Default to wildcard
 
@@ -149,7 +150,6 @@ generate_http_cfg() {
     hsts="$(querybool "$k.options.hsts")"
     hstssubs="$(querybool "$k.options.hsts_subdomains")"
     http2="$(querybool "$k.options.http2_support")"
-    ws="$(querybool "$k.options.websocket_support")"
 
     [[ -z $disableLog ]] || loga="/dev/null"
     [[ -z $disableLog ]] || loge="/dev/null"
@@ -176,6 +176,14 @@ generate_http_cfg() {
     sed -r "/^\s*$/d" \
         >"/nap/data/cfgs/http.d/${http,,}.conf" <<EOF
 # $title
+
+$(
+    [[ -z $customHTTP ]] || echo "# User's custom http config"
+    while IFS="" read -r line; do
+        echo "$line"
+    done <<<"$customHTTP"
+)
+
 server {
   # HTTP ports
 ${enableIPv4:+  listen 80${default:+ default_server};}
@@ -212,7 +220,7 @@ ${forcetls:+  # Force TLS}
 ${forcetls:+  include /nap/sys/include/force_tls.conf;}
 
 $(
-    [[ -z $custom ]] || echo "  # User's custom config"
+    [[ -z $custom ]] || echo "  # User's custom server config"
     while IFS="" read -r line; do
         echo "  $line"
     done <<<"$custom"
@@ -372,10 +380,6 @@ EOF
 ${hsts:+    # HSTS (ngx_http_headers_module required) (31536000s = 1y)}
 ${hsts:+    add_header Strict-Transport-Security \"max-age=31536000${hstssubs:+; includeSubDomains}\" always;}
 
-${ws:+    # Websocket support}
-${ws:+    proxy_set_header Connection \$http_connection;}
-${ws:+    proxy_set_header Upgrade \$http_upgrade;}
-
     include /nap/sys/include/proxy.conf;
     resolver $tmp valid=30s;
     set \$upstream $lhost;
@@ -509,7 +513,7 @@ generate_stream_cfg() {
     sed -r "/^\s*$/d" \
         >"/nap/data/cfgs/stream.d/${stream// /_}.conf" <<EOF
 $(
-    [[ -z $custom ]] || echo "  # User's custom config"
+    [[ -z $custom ]] || echo "  # User's custom stream config"
     while IFS="" read -r line; do
         echo "$line"
     done <<<"$custom"
@@ -540,6 +544,16 @@ generate_stream_cfgs() {
 
     # Wait for all jobs to finish
     wait
+}
+
+# shellcheck disable=SC2046
+install_pkgs() {
+    [[ $(querystr ".pkgs|length") -gt 0 ]] || return 0
+
+    sudo apk update
+    while read -r pkg; do
+        sudo apk add "$pkg"
+    done < <(querystr ".pkgs[]"); unset pkg
 }
 
 querybool() {
@@ -650,6 +664,7 @@ validate_http_cfgs() {
 
         # Validate other configuration values
         querystr "$k.custom[]?" >/dev/null || exit 3;
+        querystr "$k.custom_http[]?" >/dev/null || exit 3;
         querystr "$k.domain" >/dev/null || exit 3;
 
         # Validate options
@@ -665,7 +680,6 @@ validate_http_cfgs() {
         tmp="$(querybool "$k.options.hsts_subdomains")" || exit 3
         [[ -z $tmp ]] || forcetls="true"
         http2="$(querybool "$k.options.http2_support")" || exit 3
-        querybool "$k.options.websocket_support" >/dev/null || exit 3
 
         if [[ -z $cert ]] && [[ -n $forcetls ]]; then
             errx 3 "$http can not force TLS with no cert"
@@ -865,6 +879,9 @@ cfg="/nap/data/config.yaml"
 [[ -f "$cfg" ]] || errx 2 "$cfg not found"
 y2j "$cfg" || errx 3 "invalid yaml syntax"
 cfg="$(y2j "$cfg")"
+
+# Install requested packages
+install_pkgs || exit "$?"
 
 # Create missing certs
 bootstrap_pki || exit "$?"

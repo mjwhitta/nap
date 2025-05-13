@@ -7,7 +7,6 @@ http:
       block_exploits: true
       force_tls: true
       http2_support: true
-      websocket_support: true
     # Example showing default and alternative subdomain.
     subdomains:
       - adguard
@@ -42,7 +41,6 @@ http:
       block_exploits: true
       force_tls: true
       http2_support: true
-      websocket_support: true
     # Example showing alternative subdomain.
     subdomains:
       - git
@@ -55,7 +53,6 @@ http:
       block_exploits: true
       force_tls: true
       http2_support: true
-      websocket_support: true
     upstream:
       host: grafana
       port: 3000
@@ -71,7 +68,6 @@ http:
       block_exploits: true
       force_tls: true
       http2_support: true
-      websocket_support: true
     redirect: /guacamole
   Syncthing:
     cert: example.com
@@ -79,7 +75,6 @@ http:
       block_exploits: true
       force_tls: true
       http2_support: true
-      websocket_support: true
     upstream:
       host: syncthing
       port: 8384

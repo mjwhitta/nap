@@ -2,9 +2,10 @@
 http:
   # Default is a special service that does not accept subdomains. It
   # has all other supported configurations. It is not required. If you
-  # choose not to use "default", Nginx will return a 404 on port 80
-  # and a 502 on port 443.
+  # choose not to use "default", Nginx will return a 404 on port 80.
   default:
+    #cert: example.com
+
     # If you don't mount over /nap/www, it will be a generated
     # navigational dashboard (navdash) for the other configured
     # services. However, if there are no other services, it is a
@@ -47,8 +48,9 @@ http:
     #cert: letsencrypt/example.com # BYOC with Let's Encrypt
     cert: example.com
 
-    # You can add custom Nginx here. Be careful as you can easily
-    # break things! Below is an example for filtering on User-Agent.
+    # You can add custom Nginx to the server{} block here. Be careful
+    # as you can easily break things! Below is a commented example for
+    # filtering on User-Agent.
     custom:
       - |
         #if ($http_user_agent = "curl/7.87.0") {
@@ -59,6 +61,17 @@ http:
         #  ...
         #  rewrite ^/hidden(.*)$ $1 break;
         #}
+
+    # You can add custom Nginx to the http{} block here. Be careful as
+    # you can easily break things! Below is a commented example for
+    # base64 decoding the token query parameter (?token=BASE64).
+    custom_http:
+      - |
+        #perl_set $arg_token_decoded 'sub {
+        #  use MIME::Base64;
+        #  my $r = shift;
+        #  return decode_base64($r->variable("arg_token"));
+        #}';
 
     # This config option is optional but can be used to pin this
     # service to a particular domain. By default the generated Nginx
@@ -118,8 +131,6 @@ http:
       # with HTTP, it doesn't appear to be the default with current
       # browsers, so only HTTPS for now.
       http2_support: false
-      # Enable support for websockets.
-      websocket_support: false
 
     # Redirect to host or subpath.
     #redirect: https://example.com
@@ -187,6 +198,10 @@ pki:
     country: US
     state:
     unit:
+
+# Additional Alpine packages to install on startup. This is optional.
+pkgs:
+  - perl
 
 # Stream services to configure. These three examples are from:
 #
