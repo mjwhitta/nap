@@ -301,10 +301,14 @@ EOF
     tmp="$(querystr "$k.file")"
     if [[ -n $tmp ]]; then
         root="$(dirname "$tmp")"
-        [[ $root != "." ]] || unset root
+        case "$root" in
+            "/"*) ;;
+            ".") root="/nap/www" ;;
+            *) root="/nap/www/$root" ;;
+        esac
         cat <<EOF
   location /$loc {
-      root ${root:-/nap/www};
+      root ${root%/};
       try_files /${tmp##*/} /${tmp##*/};
   }
 EOF
@@ -337,6 +341,11 @@ EOF
     # Create root, if defined
     tmp="$(querystr "$k.root")"
     if [[ -n $tmp ]]; then
+        case "$tmp" in
+            "/"*) ;;
+            ".") tmp="/nap/www" ;;
+            *) tmp="/nap/www/$tmp" ;;
+        esac
         cat <<EOF
   location /$loc {
     root ${tmp%/};

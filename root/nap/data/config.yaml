@@ -79,9 +79,9 @@ http:
     # to "<subdomain>.example.com".
     domain: example.com
 
-    # Serve a static file, regardless of path. The default root for
-    # the file is /nap/www and can be left out, otherwise use absolute
-    # path.
+    # File serves a static file, regardless of path. The default root
+    # for the file is /nap/www and can be left out, otherwise use
+    # absolute path.
     #file: index.html
 
     # Proxy additional locations. Locations can be configured with
@@ -139,8 +139,9 @@ http:
     # Respond with specific text, regardless of path.
     respond: "<html><body><h1>It works!</h1></body></html>"
 
-    # Root serves a directory. If using Docker, make sure you mount
-    # your directory.
+    # Root serves a directory. If the path is relative, it is relative
+    # to /nap/www. If using Docker, make sure you mount your
+    # directory.
     #root: /www
 
     # Specify subdomains to reach this service. If none are specified,
