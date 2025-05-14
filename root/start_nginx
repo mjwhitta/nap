@@ -200,8 +200,8 @@ ${http2:+  http2 on;}
   server_name ${server:-_};
 
   # Logs
-  access_log $loga;
-  error_log $loge;
+  access_log $loga main;
+  error_log $loge warn;
 
 ${autoindex:+  # Allow directory indexing}
 ${autoindex:+  autoindex on;}
