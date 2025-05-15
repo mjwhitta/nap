@@ -887,7 +887,7 @@ setup_nap
 # Read config from disk just once
 cfg="/nap/data/config.yaml"
 [[ -f "$cfg" ]] || errx 2 "$cfg not found"
-y2j "$cfg" || errx 3 "invalid yaml syntax"
+y2j "$cfg" &>/dev/null || errx 3 "invalid yaml syntax"
 cfg="$(y2j "$cfg")"
 
 # Install requested packages
