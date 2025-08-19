@@ -84,6 +84,11 @@ http:
     # absolute path.
     #file: index.html
 
+    # You can use this section to add additional proxy_set_header
+    # commands (upstream only)
+    #proxy_set_headers:
+    #  Host: $host
+
     # Proxy additional locations. Locations can be configured with
     # targets, just like the top-level http service.
     locations:

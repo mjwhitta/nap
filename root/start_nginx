@@ -70,7 +70,7 @@ EOF
         done < <(querystr "$k.certs[]?"); unset cert
 
         certify -p "/nap/data/pki/${pki// /_}" "${certs[@]}"
-    done < <(querystr ".pki|keys|.[]"); unset pki
+    done < <(querystr ".pki|keys?|.[]"); unset pki
 }
 
 generate_http_cfg() {
@@ -233,7 +233,7 @@ $(
 
     while read -r loc; do
         generate_loc "$loc" "$k.locations[\"$loc\"]"
-    done < <(querystr "$k.locations|keys|.[]"); unset loc
+    done < <(querystr "$k.locations|keys?|.[]"); unset loc
 )
 
   # Default location
@@ -254,7 +254,7 @@ generate_http_cfgs() {
     # Create Nginx configs
     while read -r http; do
         generate_http_cfg "$http" &
-    done < <(querystr ".http|keys|.[]"); unset http
+    done < <(querystr ".http|keys?|.[]"); unset http
 
     # Wait for all jobs to finish
     wait
@@ -388,7 +388,15 @@ EOF
   location /$loc {
 ${hsts:+    # HSTS (ngx_http_headers_module required) (31536000s = 1y)}
 ${hsts:+    add_header Strict-Transport-Security \"max-age=31536000${hstssubs:+; includeSubDomains}\" always;}
+EOF
 
+    while read -r hdr; do
+        cat <<EOF
+    proxy_set_header $hdr $(querystr "$k.proxy_set_headers[\"$hdr\"]");
+EOF
+    done < <(querystr "$k.proxy_set_headers|keys?|.[]"); unset hdr
+
+    cat <<EOF
     include /nap/sys/include/proxy.conf;
     resolver $tmp valid=30s;
     set \$upstream $lhost;
@@ -414,7 +422,7 @@ generate_navdash() {
         *) return 0 ;;
     esac
 
-    if ! querystr ".http|keys|.[]" | grep -qv "default"; then
+    if ! querystr ".http|keys?|.[]" | grep -qv "default"; then
         cat >/nap/www/index.html <<EOF
 <html><body><h1>It works!</h1></body></html>
 EOF
@@ -482,7 +490,7 @@ EOF
       </script>
 EOF
         done < <(
-            querystr ".http|keys|.[]" | grep -v "default"
+            querystr ".http|keys?|.[]" | grep -v "default"
         ); unset http
     ) >>www/index.html
 
@@ -549,7 +557,7 @@ generate_stream_cfgs() {
     # Create Nginx configs
     while read -r stream; do
         generate_stream_cfg "$stream" &
-    done < <(querystr ".stream|keys|.[]"); unset stream
+    done < <(querystr ".stream|keys?|.[]"); unset stream
 
     # Wait for all jobs to finish
     wait
@@ -677,6 +685,11 @@ validate_http_cfgs() {
         querystr "$k.custom_http[]?" >/dev/null || exit 3;
         querystr "$k.domain" >/dev/null || exit 3;
 
+        while read -r hdr; do
+            querystr "$k.proxy_set_headers[\"$hdr\"]" >/dev/null || \
+                exit 3;
+        done < <(querystr "$k.proxy_set_headers|keys?|.[]"); unset hdr
+
         # Validate options
         querybool "$k.options.autoindex" >/dev/null || exit 3
         querybool "$k.options.block_exploits" >/dev/null || exit 3
@@ -740,7 +753,7 @@ validate_http_cfgs() {
                     errx 3 \
                         "$http's location $loc has multiple targets"
                 fi
-            done < <(querystr "$k.locations|keys|.[]")
+            done < <(querystr "$k.locations|keys?|.[]")
             unset loc
         fi
 
@@ -780,7 +793,7 @@ validate_http_cfgs() {
         if [[ $count -gt 1 ]]; then
             errx 3 "$http's root location has multiple targets"
         fi
-    done < <(querystr ".http|keys|.[]"); unset http
+    done < <(querystr ".http|keys?|.[]"); unset http
 }
 
 validate_stream_cfgs() {
@@ -839,7 +852,7 @@ validate_stream_cfgs() {
         # Needs an upstream defined
         tmp="$(querystr "$k.upstream")"
         [[ -n $tmp ]] || errx 3 "$stream has no upstream defined"
-    done < <(querystr ".stream|keys|.[]"); unset stream
+    done < <(querystr ".stream|keys?|.[]"); unset stream
 }
 
 declare -a args

@@ -41,6 +41,8 @@ http:
       block_exploits: true
       force_tls: true
       http2_support: true
+    proxy_set_headers:
+      Host: $host
     # Example showing alternative subdomain.
     subdomains:
       - git
