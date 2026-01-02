@@ -2,7 +2,7 @@
 http:
   # Default is a special service that does not accept subdomains. It
   # has all other supported configurations. It is not required. If you
-  # choose not to use "default", Nginx will return a 404 on port 80.
+  # choose not to use "default", Nginx will return a 404.
   default:
     #cert: example.com
 
@@ -38,9 +38,9 @@ http:
     # The second is for Let's Encrypt specifically. Let's Encrypt
     # appears to use a folder heirarchy like <domain>/fullchain.pem
     # and <domain>/privkey.pem. So that you don't need to move or
-    # rename files, you can use /letsencrypt/<domains> and NAP will
-    # find fullchain.pem and privkey.pem in the /byoc/<domain>
-    # directory. Make sure to mount your domain folders to /byoc.
+    # rename files, you can use letsencrypt/<domain> and NAP will find
+    # fullchain.pem and privkey.pem in the /byoc/<domain> directory.
+    # Make sure to mount your domain folders to /byoc.
     #
     #cert: example.com # Default PKI
     #cert: <pki>/example.com # Named PKI
@@ -162,8 +162,17 @@ http:
     #  port: 3000
     #  scheme: http
 
-# This section is optional and lets you customize the colors of the
-# navdash. The defaults use the Solarized Dark palette.
+# The navdash section is optional and lets you customize the colors of
+# the navdash. The defaults use the Solarized Dark palette.
+
+# Dracula
+#navdash:
+#  background: 282a36
+#  button-background: 44475a
+#  button-border: 6272a4
+#  foreground: ff79c6
+
+# Solarized Dark
 navdash:
   background: 002b36
   button-background: 073642
