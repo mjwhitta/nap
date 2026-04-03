@@ -37,7 +37,8 @@ RUN set -o pipefail && \
     ) && ( \
         rm -f -r /yaml2json && \
         apk --no-cache --update del git go upx && \
-        rm -f -r /root/{.cache,go} /tmp/* /var/{cache/apk,tmp}/* \
+        rm -f -r /root/{.cache,go} /tmp/* /var/{cache/apk,tmp}/* && \
+        find /etc -name "*.apk-new" -delete \
     )
 
 WORKDIR /nap
