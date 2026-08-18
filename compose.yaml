@@ -1,8 +1,8 @@
-name: homelab
 networks:
   nap:
 services:
   nap:
+    container_name: nap
     environment:
       - DKR_GID=1000 # Your GID
       - DKR_UID=1000 # Your UID

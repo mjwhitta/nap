@@ -400,7 +400,7 @@ EOF
     include /nap/sys/include/proxy.conf;
     resolver $tmp valid=30s;
     set \$upstream $lhost;
-    proxy_pass $lscheme://\$upstream:$lport;
+    proxy_pass $lscheme://\$upstream${lport:+:$lport};
   }
 EOF
 }
