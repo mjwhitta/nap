@@ -401,6 +401,10 @@ EOF
     resolver $tmp valid=30s;
     set \$upstream $lhost;
     proxy_pass $lscheme://\$upstream${lport:+:$lport};
+    proxy_set_header Host $lhost;
+    proxy_ssl_name $lhost;
+    proxy_ssl_server_name on;
+    proxy_ssl_verify off;
   }
 EOF
 }
